@@ -11,6 +11,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 import multiprocessing
 
+Exit = False
 
 state_rcv, state_snd = multiprocessing.Pipe(duplex=False)
 # Criação dos pipes para comunicação entre processos
@@ -19,14 +20,16 @@ peer_pipe_rcv, peer_pipe_snd = multiprocessing.Pipe(duplex=False)
 # Função para leitura dos dados
 async def readData():
     while True:
+        if Exit:
+            break
         # Envia dados através do peer_pipe_snd
         vet = []
-        '''
+        
         for i in range(2094):
             vet.append(0)
         for i in range(2094):
             vet[i] = randint(0, 100)
-        '''
+        
         peer_pipe_snd.send(vet)
         await asyncio.sleep(0.2)
 
@@ -39,17 +42,21 @@ async def updateScreen(root, ax, canvas):
             except EOFError:
                 print("Burro")
                 return
-            vet = []
-            for i in range(2094):
-                vet[i] = randint(0, 100)
-            ax.plot(vet)
-            canvas.draw()
-            print("Oi")
             try:
                 root.update()
             except:
-                return False
-            
+                Exit = True
+                break
+        '''
+        vet = []
+        for i in range(2094):
+            vet.append(0)
+        for i in range(2094):
+            vet[i] = randint(0, 100)
+        ax.plot(vet)
+        '''
+        ax.plot(read)
+        canvas.draw() 
         await asyncio.sleep(0.1)
 
 def Func_1() -> None:
@@ -96,8 +103,7 @@ async def main() -> int:
 
     await asyncio.gather(
         task_read, 
-        task_update, 
-        root.mainloop()
+        task_update
         )
 if __name__ == '__main__':
     # Execução do loop de eventos do asyncio
