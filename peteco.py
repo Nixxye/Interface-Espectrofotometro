@@ -1,48 +1,39 @@
-#Ler os dados e enviar para um pipe
-#Mostrar na tela dos dados
-#Imprimir os resultados obtidos
-#Receber os inputs 
-
-#3 processos: Ler os dados e ler os inputs e mostrar os dados na tela
 import asyncio
+import tkinter
 import multiprocessing
+from random import randint
 
-# Função assíncrona que recebe mensagens do pipe
-#Draw:
-async def updateScreen(pipe):
+# Criação dos pipes para comunicação entre processos
+peer_pipe_rcv, peer_pipe_snd = multiprocessing.Pipe(duplex=False)
+
+# Função para leitura dos dados
+async def readData():
     while True:
-        message = pipe.recv()  # Recebe mensagem do pipe
-        print(f"Receiver received: {message}")
+        # Envia dados através do peer_pipe_snd
+        peer_pipe_snd.send(randint(0, 100))
+        await asyncio.sleep(0.2)
 
-# Função assíncrona que envia mensagens para o pipe
-#Observer:
-async def getInputs(pipe):
-    for i in range(5):
-        message = f"Message {i}"
-        pipe.send(message)  # Envia mensagem para o pipe
-        await asyncio.sleep(1)  # Aguarda 1 segundo entre as mensagens
+# Função para atualização da tela
+async def updateScreen():
+    while True:
+        if peer_pipe_rcv.poll():
+            try:
+                read = peer_pipe_rcv.recv()
+            except EOFError:
+                return
+            print(read)
+        await asyncio.sleep(0.1)
+
 
 # Função principal
-def main():
-    # Cria o pipe de comunicação
-    parent_pipe, child_pipe = multiprocessing.Pipe()
+async def main():
+    # Criação das tarefas assíncronas
+    task_read = asyncio.create_task(readData())
+    task_update = asyncio.create_task(updateScreen())
 
-    # Cria um processo para executar a função receiver
-    receiver_process = multiprocessing.Process(target=receiver, args=(child_pipe,))
-    receiver_process.start()
+    # Aguarda o término das tarefas
+    await asyncio.gather(task_read, task_update)
 
-    # Cria uma task assíncrona para executar a função sender
-    loop = asyncio.get_event_loop()
-    sender_task = loop.create_task(sender(parent_pipe))
-
-    # Executa o loop de eventos assíncronos até que a task seja concluída
-    loop.run_until_complete(sender_task)
-
-    # Encerra o processo do receiver
-    receiver_process.terminate()
-
-if __name__ == "__main__":
-    main()
-
-#Print:
-#Read:
+if __name__ == '__main__':
+    # Execução do loop de eventos do asyncio
+    asyncio.run(main())
