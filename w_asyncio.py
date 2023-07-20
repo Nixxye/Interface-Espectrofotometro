@@ -59,6 +59,10 @@ class App(tk.Tk):
         self.start_btn.pack()
         self.save_btn = tk.Button(self.calibration_frame, text='Salvar', command=self.saveCalibration)
         self.save_btn.pack()
+        self.back_cf_btn = tk.Button(self.calibration_frame, text='Voltar', command=self.back)
+        self.back_cf_btn.pack()
+        self.back_mf_btn = tk.Button(self.main_frame, text='Voltar', command=self.back)
+        self.back_mf_btn.pack()
 
         self.current_frame = self.menu_frame
         self.current_frame.pack()
@@ -67,46 +71,18 @@ class App(tk.Tk):
         self.current_frame.pack_forget()
         self.current_frame = new_frame
         self.current_frame.pack()
-    '''
-    async def readData(self):
-        while True:
-            data = []
-            for i in range(2094):
-                data.append(randint(0, 800))
-            self.peer_pipe_snd.send(data)
-            await asyncio.sleep(0.2)
 
-    async def updateScreen(self):
-        while True:
-            if self.peer_pipe_rcv.poll():
-                try:
-                    data = self.peer_pipe_rcv.recv()
-                    if self.current_frame == self.main_frame:
-                        self.ax.cla()
-                        self.ax.plot(data)
-                        self.canvas.draw()
-                    elif self.current_frame == self.calibration_frame:
-                        self.calibration_ax.cla()
-                        self.calibration_ax.plot(data)
-                        self.calibration_canvas.draw()
-                    await asyncio.sleep(0.2)
-                except EOFError:
-                    return
-    '''
     async def readData(self):
         while True:
             data = []
             for i in range(2094):
                 data.append(randint(0, 800))
-            #self.peer_pipe_snd.send(data)
             self.queue.put_nowait(data)
             await asyncio.sleep(0.2)
 
     async def updateScreen(self):
         while True:
-            #if self.peer_pipe_rcv.poll():
             try:
-                #data = self.peer_pipe_rcv.recv()
                 data = self.queue.get_nowait()
                 if self.current_frame == self.main_frame:
                     self.ax.cla()
@@ -128,6 +104,9 @@ class App(tk.Tk):
 
     def calibrate(self):
         self.change_frame(self.calibration_frame)
+
+    def back(self):
+        self.change_frame(self.menu_frame)
 
     async def updater(self, interval):
         while True:
