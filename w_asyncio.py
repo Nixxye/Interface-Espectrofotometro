@@ -1,8 +1,6 @@
-import time
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import numpy as np
 import multiprocessing
 import asyncio
 from random import randint
@@ -21,8 +19,8 @@ class App(tk.Tk):
         self.tasks.append(loop.create_task(self.readData()))
 
         # Pipes de comunicação:
-        #self.peer_pipe_rcv, self.peer_pipe_snd = multiprocessing.Pipe(duplex=False)
         self.queue = asyncio.Queue()
+
         # Janela principal:
         self.geometry("800x600")
         self.wm_title("Teste com classes")
@@ -57,6 +55,8 @@ class App(tk.Tk):
         self.calibration_btn.pack()
         self.start_btn = tk.Button(self.menu_frame, text='Começar', command=self.start)
         self.start_btn.pack()
+        self.exit_btn = tk.Button(self.menu_frame, text='Sair', command=self.close)
+        self.exit_btn.pack()
         self.save_btn = tk.Button(self.calibration_frame, text='Salvar', command=self.saveCalibration)
         self.save_btn.pack()
         self.back_cf_btn = tk.Button(self.calibration_frame, text='Voltar', command=self.back)
