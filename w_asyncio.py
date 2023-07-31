@@ -66,7 +66,7 @@ class App(tk.Tk):
         self.calibration_ax.set_ylim(800)
         self.calibration_canvas = FigureCanvasTkAgg(self.calibration_fig, master=self.calibration_frame)
         self.calibration_canvas.draw()
-        #self.calibration_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.calibration_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         # Botões:
         self.calibration_btn = tk.Button(self.menu_frame, text='Calibrar', command=self.calibrate)
