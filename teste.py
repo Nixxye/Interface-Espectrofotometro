@@ -1,65 +1,38 @@
+import tkinter as tk
+from tkinter import ttk
 import asyncio
-import multiprocessing
-import keyboard
-import tkinter
 
-peer_pipe_rcv, peer_pipe_snd = multiprocessing.Pipe(duplex=False)
-state_rcv, state_snd = multiprocessing.Pipe(duplex=False)
 
-async def readData() -> None:
-    while True:
-        peer_pipe_snd.send(1)
+class App:
+    async def exec(self):
+        self.window = Window(asyncio.get_event_loop())
+        await self.window.show();
 
-async def updateScreen() -> None:
-    while True:
-        data = peer_pipe_rcv.recv()
-        print(data)
 
-async def getInputs() -> None:
-    while True:
-        if keyboard.is_pressed('space'):
-            exit
-        if keyboard.is_pressed('s'):
-            saveData()
+class Window(tk.Tk):
+    def __init__(self, loop):
+        self.loop = loop
+        self.root = tk.Tk()
+        self.animation = "░▒▒▒▒▒"
+        self.label = tk.Label(text="")
+        self.label.grid(row=0, columnspan=2, padx=(8, 8), pady=(16, 0))
+        self.progressbar = ttk.Progressbar(length=280)
+        self.progressbar.grid(row=1, columnspan=2, padx=(8, 8), pady=(16, 0))
+        button_non_block = tk.Button(text="Calculate Async", width=10, command=lambda: self.loop.create_task(self.calculate_async()))
+        button_non_block.grid(row=2, column=1, sticky=tk.W, padx=8, pady=8)
 
-def saveData() -> None:
-    print("Saved")
+    async def show(self):
+        while True:
+            self.label["text"] = self.animation
+            self.animation = self.animation[1:] + self.animation[0]
+            self.root.update()
+            await asyncio.sleep(.1)
 
-async def main():
+    async def calculate_async(self):
+        max = 3000000
+        for i in range(1, max):
+            self.progressbar["value"] = i / max * 100
+            if i % 1000 == 0:
+                await asyncio.sleep(0)
 
-    root_obj = tkinter.Tk()
-
-    root_obj.title('Multicast Peer')
-
-    root_obj.geometry("320x320")
-    root_obj.resizable(False, False)
-
-    button_join = tkinter.Button(
-        root_obj, width=25, activebackground='gold', text="Join Group")
-    button_join.pack(side='top', expand=1)
-
-    button_request = tkinter.Button(
-        root_obj, width=25, activebackground='gold', text="Acquire Lock")
-    button_request.pack(side='top', expand=1)
-
-    button_request = tkinter.Button(
-        root_obj, width=25, activebackground='gold', text="Release Lock")
-    button_request.pack(side='top', expand=1)
-
-    button_exit = tkinter.Button(
-        root_obj, width=25, activebackground='gold', text="Close Connection")
-    button_exit.pack(side='top', expand=1)
-
-    label_state = tkinter.Label(root_obj, bg='black', \
-        fg='green', width=80, justify='center', pady=8, font=("Noto mono", 12))
-    label_state.pack(side='top')
-
-    await asyncio.gather(
-        readData(),
-        updateScreen(),
-        getInputs()
-        #run_tk(root_obj, 0.1, label_state)
-    )
-
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(App().exec())

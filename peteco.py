@@ -1,60 +1,105 @@
-import asyncio
-import multiprocessing
-
+import tkinter
 from tkinter import ttk
-from tkinter import *
 
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk)
+# Implement the default Matplotlib key bindings.
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
 
 import numpy as np
 
-from random import randint
+import asyncio
 
+import multiprocessing
 
-# Criação dos pipes para comunicação entre processos
 peer_pipe_rcv, peer_pipe_snd = multiprocessing.Pipe(duplex=False)
+state_rcv, state_snd = multiprocessing.Pipe(duplex=False)
 
-# Função para leitura dos dados
-async def readData():
-    while True:
-        # Envia dados através do peer_pipe_snd
-        peer_pipe_snd.send(randint(0, 100))
-        await asyncio.sleep(0.2)
-
-# Função para atualização da tela
-async def updateScreen():
-    while True:
-        if peer_pipe_rcv.poll():
-            try:
-                read = peer_pipe_rcv.recv()
-            except EOFError:
-                return
-            print(read)
-        await asyncio.sleep(0.1)
+'''
+peer_pipe_rcv, peer_pipe_snd = multiprocessing.Pipe(duplex=False)
+state_rcv, state_snd = multiprocessing.Pipe(duplex=False)
 
 
-# Função principal
+'''
+
+async def func1():
+    print("FUNC1")
+
+async def func2():
+    print("FUNC2")
+
+async def run_tk(root, interval=0.1, label_state: tkinter.Label = None) -> None:
+    try:
+        while True:
+            if state_rcv.poll():
+                try:
+                    new_state = state_rcv.recv()
+                except EOFError:
+                    return
+                except:
+                    raise
+
+                #label_state.config(text=new_state)
+
+            root.update()
+            await asyncio.sleep(interval)
+    except:
+        print("Error")
+    finally:
+        return
+
+
 async def main():
-    root = Tk()
-    root.title('Espectrofotometro - PETECO')
-    root.geometry("640x480")
+    root = tkinter.Tk()
+    root.wm_title("Embedding in Tk")
 
-    fig, ax = plt.subplots()
-    canvas = FigureCanvasTkAgg(fig, master=root)  
-    canvas.get_tk_widget().pack(side= TOP, fill= BOTH, expand=1)
+    fig = Figure(figsize=(5, 4), dpi=100)
+    t = np.arange(0, 3, .01)
+    ax = fig.add_subplot()
+    line, = ax.plot(t, 2 * np.sin(2 * np.pi * t))
+    ax.set_xlabel("time [s]")
+    ax.set_ylabel("f(t)")
 
-    # Criação das tarefas assíncronas
-    task_read = asyncio.create_task(readData())
-    task_update = asyncio.create_task(updateScreen())
+    canvas = FigureCanvasTkAgg(fig, master=root)  # A tk.DrawingArea.
+    canvas.draw()
 
-    # Aguarda o término das tarefas
+    canvas.mpl_connect(
+        "key_press_event", lambda event: print(f"you pressed {event.key}"))
+    canvas.mpl_connect("key_press_event", key_press_handler)
+    '''
+    root_obj = tkinter.Tk()
+
+    root_obj.title('Multicast Peer')
+
+    root_obj.geometry("320x320")
+    root_obj.resizable(False, False)
+
+    button_join = tkinter.Button(
+        root_obj, width=25, activebackground='gold', text="Join Group", command=send_command_join)
+    button_join.pack(side='top', expand=1)
+
+    button_request = tkinter.Button(
+        root_obj, width=25, activebackground='gold', text="Acquire Lock", command=send_command_acquire_lock)
+    button_request.pack(side='top', expand=1)
+
+    button_request = tkinter.Button(
+        root_obj, width=25, activebackground='gold', text="Release Lock", command=send_command_release_lock)
+    button_request.pack(side='top', expand=1)
+
+    button_exit = tkinter.Button(
+        root_obj, width=25, activebackground='gold', text="Close Connection", command=send_command_exit)
+    button_exit.pack(side='top', expand=1)
+
+    label_state = tkinter.Label(root_obj, bg='black', \
+        fg='green', width=80, justify='center', pady=8, font=("Noto mono", 12))
+    label_state.pack(side='top')
+    '''
     await asyncio.gather(
-        task_read, 
-        task_update, 
-        root.mainloop()
-        )
+        func1(),
+        func2(),
+        run_tk(root, 0.1)
+    )
 
 if __name__ == '__main__':
-    # Execução do loop de eventos do asyncio
     asyncio.run(main())

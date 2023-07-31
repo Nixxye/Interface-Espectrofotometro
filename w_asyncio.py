@@ -1,7 +1,6 @@
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import multiprocessing
 import asyncio
 from random import randint
 
@@ -20,6 +19,10 @@ class App(tk.Tk):
 
         # Pipes de comunicação:
         self.queue = asyncio.Queue()
+
+        # Dados da calibração:
+        self.static_data = []
+        self.load_data()
 
         # Janela principal:
         self.geometry("800x600")
@@ -40,6 +43,21 @@ class App(tk.Tk):
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
+        # Adicionar o gráfico translúcido como uma segunda curva no mesmo subplot:
+        self.ax_background = self.ax.twinx()  # Cria um novo eixo compartilhando o mesmo eixo x
+        self.ax_background.set_ylabel("índice")  # Ajusta o label do eixo y
+        self.ax_background.set_ylim(800)  # Define o limite do eixo y
+        self.ax_background.plot([], [], alpha=0.5)  # Plot inicial vazio com transparência (alpha=0.5)
+
+
+        # Botões:
+        self.abs_btn = tk.Button(self.calibration_frame, text='Absorbancia')
+        self.abs_btn.pack(side=tk.TOP)
+        self.tmt_btn = tk.Button(self.calibration_frame, text='Transmitancia')
+        self.tmt_btn.pack(side=tk.TOP)
+        self.smp_btn = tk.Button(self.calibration_frame, text='Valores lidos')
+        self.smp_btn.pack(side=tk.TOP)
+
         # Gráfico de calibração:
         self.calibration_fig = Figure(figsize=(5, 4), dpi=100)
         self.calibration_ax = self.calibration_fig.add_subplot()
@@ -48,24 +66,28 @@ class App(tk.Tk):
         self.calibration_ax.set_ylim(800)
         self.calibration_canvas = FigureCanvasTkAgg(self.calibration_fig, master=self.calibration_frame)
         self.calibration_canvas.draw()
-        self.calibration_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        #self.calibration_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         # Botões:
         self.calibration_btn = tk.Button(self.menu_frame, text='Calibrar', command=self.calibrate)
         self.calibration_btn.pack()
         self.start_btn = tk.Button(self.menu_frame, text='Começar', command=self.start)
         self.start_btn.pack()
-        self.exit_btn = tk.Button(self.menu_frame, text='Sair', command=self.close)
-        self.exit_btn.pack()
-        self.save_btn = tk.Button(self.calibration_frame, text='Salvar', command=self.saveCalibration)
+
+        self.save_btn = tk.Button(self.calibration_frame, text='Salvar', command=self.start_save_calibration_task)
         self.save_btn.pack()
-        self.back_cf_btn = tk.Button(self.calibration_frame, text='Voltar', command=self.back)
-        self.back_cf_btn.pack()
-        self.back_mf_btn = tk.Button(self.main_frame, text='Voltar', command=self.back)
-        self.back_mf_btn.pack()
 
         self.current_frame = self.menu_frame
         self.current_frame.pack()
+
+    def load_data(self):
+        try:
+            with open("calibration_data.txt", 'r') as file:
+                lines = file.readlines()
+                self.static_data = [float(line.strip()) for line in lines]
+        except FileNotFoundError:
+            print("Arquivo de calibração não encontrado. Os dados do gráfico translúcido serão vazios.")
+
 
     def change_frame(self, new_frame):
         self.current_frame.pack_forget()
@@ -84,10 +106,18 @@ class App(tk.Tk):
         while True:
             try:
                 data = self.queue.get_nowait()
+                # Switch case
                 if self.current_frame == self.main_frame:
                     self.ax.cla()
                     self.ax.plot(data)
                     self.canvas.draw()
+
+                    # Gráfico de fundo:
+                    if self.static_data:
+                        self.ax_background.cla()  # Limpa o gráfico de fundo
+                        self.ax_background.plot(self.static_data, alpha=0.5, color='red')  # Plota os dados de calibração
+                        self.canvas.draw()  # Atualiza o canvas para exibir o gráfico translúcido
+
                 elif self.current_frame == self.calibration_frame:
                     self.calibration_ax.cla()
                     self.calibration_ax.plot(data)
@@ -99,14 +129,31 @@ class App(tk.Tk):
     def start(self):
         self.change_frame(self.main_frame)
 
-    def saveCalibration(self):
-        print("Saving Calibration")
+    def start_save_calibration_task(self):
+        # Iniciar uma task para a função saveCalibration usando o loop de eventos asyncio
+        self.loop.create_task(self.saveCalibration())
+
+    async def saveCalibration(self):
+
+        data = await self.queue.get()
+        # while True:
+        #     try:
+        #         # Obter o vetor de números da queue
+        #         data = self.queue.get_nowait()
+        #         break  # Se conseguimos obter os dados, saímos do loop
+        #     except asyncio.QueueEmpty:
+        #         # Se a queue estiver vazia, aguardamos um curto intervalo e tentamos novamente
+        #         await asyncio.sleep(0.1)
+        
+        # Abrir o arquivo .txt em modo de escrita ('w') e escrever o vetor
+        with open("calibration_data.txt", 'w') as file:
+            for number in data:
+                file.write(str(number) + '\n')
+        self.load_data()
+        print("Calibration data saved to calibration_data.txt")
 
     def calibrate(self):
         self.change_frame(self.calibration_frame)
-
-    def back(self):
-        self.change_frame(self.menu_frame)
 
     async def updater(self, interval):
         while True:
