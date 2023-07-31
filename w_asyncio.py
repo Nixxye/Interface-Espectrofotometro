@@ -136,20 +136,13 @@ class App(tk.Tk):
     async def saveCalibration(self):
 
         data = await self.queue.get()
-        # while True:
-        #     try:
-        #         # Obter o vetor de números da queue
-        #         data = self.queue.get_nowait()
-        #         break  # Se conseguimos obter os dados, saímos do loop
-        #     except asyncio.QueueEmpty:
-        #         # Se a queue estiver vazia, aguardamos um curto intervalo e tentamos novamente
-        #         await asyncio.sleep(0.1)
-        
-        # Abrir o arquivo .txt em modo de escrita ('w') e escrever o vetor
+
         with open("calibration_data.txt", 'w') as file:
             for number in data:
                 file.write(str(number) + '\n')
+
         self.load_data()
+        
         print("Calibration data saved to calibration_data.txt")
 
     def calibrate(self):
