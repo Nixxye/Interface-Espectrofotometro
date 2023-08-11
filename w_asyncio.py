@@ -47,7 +47,7 @@ class App(tk.Tk):
         self.ax_background = self.ax.twinx()  # Cria um novo eixo compartilhando o mesmo eixo x
         self.ax_background.set_ylabel("índice")  # Ajusta o label do eixo y
         self.ax_background.set_ylim(800)  # Define o limite do eixo y
-        self.ax_background.plot([], [], alpha=0.5)  # Plot inicial vazio com transparência (alpha=0.5)
+        self.ax_background.plot([], [], alpha=0.9)  # Plot inicial vazio com transparência (alpha=0.5)
 
 
         # Botões:
@@ -108,15 +108,16 @@ class App(tk.Tk):
                 data = self.queue.get_nowait()
                 # Switch case
                 if self.current_frame == self.main_frame:
+                    # Gráfico de fundo:
+                    if self.static_data:
+                        self.ax_background.cla()  # Limpa o gráfico de fundo
+                        self.ax_background.plot(self.static_data, alpha=0.3, color='red')  # Plota os dados de calibração
+                        self.canvas.draw()  # Atualiza o canvas para exibir o gráfico translúcido
+
                     self.ax.cla()
                     self.ax.plot(data)
                     self.canvas.draw()
 
-                    # Gráfico de fundo:
-                    if self.static_data:
-                        self.ax_background.cla()  # Limpa o gráfico de fundo
-                        self.ax_background.plot(self.static_data, alpha=0.5, color='red')  # Plota os dados de calibração
-                        self.canvas.draw()  # Atualiza o canvas para exibir o gráfico translúcido
 
                 elif self.current_frame == self.calibration_frame:
                     self.calibration_ax.cla()
