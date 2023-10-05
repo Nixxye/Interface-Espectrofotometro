@@ -1,1 +1,1 @@
-# Peteco
+# Interface Espectrofotômetro
